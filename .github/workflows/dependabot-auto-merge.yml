@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: "squash"
+      use-app-token:
+        description: "Generate a GitHub App token from app-id and app-private-key secrets"
+        required: false
+        type: boolean
+        default: false
     secrets:
       app-id:
         description: "Optional GitHub App ID for approval and merge"
@@ -31,7 +36,7 @@ jobs:
     steps:
       - name: Generate GitHub App token
         id: app-token
-        if: ${{ secrets.app-id != '' && secrets.app-private-key != '' }}
+        if: ${{ inputs.use-app-token }}
         uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.app-id }}
