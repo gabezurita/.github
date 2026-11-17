@@ -6,8 +6,4 @@ Shared GitHub Actions workflows and repository defaults for `gabezurita` reposit
 
 ### `dependabot-auto-merge.yml`
 
-Called on `pull_request_target` by downstream repositories to:
-
-1. Verify `github.actor == 'dependabot[bot]'` without checking out untrusted PR code.
-2. Fetch Dependabot metadata (`dependabot/fetch-metadata@v3`) and block major version bumps (`version-update:semver-major`).
-3. Optionally approve the PR and enable auto-merge (`gh pr merge --auto`), relying on each repository's `main` ruleset required status checks as the merge gate.
+Called on `pull_request_target` by downstream repositories to auto-merge non-major Dependabot PRs behind `pull_request` CI and `main` ruleset checks. See [docs/dependabot-auto-merge.md](docs/dependabot-auto-merge.md) for caller snippets, repository prerequisites, and the weekly vs. event-driven security update policy.
