@@ -1,0 +1,81 @@
+name: Reusable Dependabot Auto-merge
+
+on:
+  workflow_call:
+    inputs:
+      approve:
+        description: "Attempt to approve the PR before merging"
+        required: false
+        type: boolean
+        default: true
+      merge-method:
+        description: "Merge method: squash, merge, or rebase"
+        required: false
+        type: string
+        default: "squash"
+    secrets:
+      app-id:
+        description: "Optional GitHub App ID for approval and merge"
+        required: false
+      app-private-key:
+        description: "Optional GitHub App private key for approval and merge"
+        required: false
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        if: ${{ secrets.app-id != '' && secrets.app-private-key != '' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.app-id }}
+          private-key: ${{ secrets.app-private-key }}
+
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v3
+        with:
+          github-token: ${{ steps.app-token.outputs.token || github.token }}
+
+      - name: Skip major or unknown updates
+        if: ${{ steps.metadata.outputs.update-type == '' || steps.metadata.outputs.update-type == 'version-update:semver-major' }}
+        env:
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
+        run: |
+          echo "Skipping auto-merge (update-type='$UPDATE_TYPE', dependencies='$DEPENDENCY_NAMES')." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Approve and enable auto-merge
+        if: ${{ steps.metadata.outputs.update-type != '' && steps.metadata.outputs.update-type != 'version-update:semver-major' }}
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+          APPROVE: ${{ inputs.approve }}
+          MERGE_METHOD: ${{ inputs.merge-method }}
+        run: |
+          set -euo pipefail
+
+          case "$MERGE_METHOD" in
+            squash|merge|rebase) MERGE_FLAG="--$MERGE_METHOD" ;;
+            *) echo "Unsupported merge-method: $MERGE_METHOD" >&2; exit 1 ;;
+          esac
+
+          if [[ "$APPROVE" == "true" ]]; then
+            gh pr review --approve --body "Auto-approved: Dependabot non-major update gated by required status checks." "$PR_URL" || true
+          fi
+
+          if ! gh pr merge --auto "$MERGE_FLAG" "$PR_URL"; then
+            STATUS=$(gh pr view "$PR_URL" --json mergeStateStatus --jq .mergeStateStatus)
+            if [[ "$STATUS" == "CLEAN" || "$STATUS" == "HAS_HOOKS" ]]; then
+              gh pr merge "$MERGE_FLAG" "$PR_URL"
+            else
+              echo "Cannot enable auto-merge and PR is not clean (mergeStateStatus=$STATUS)." >&2
+              exit 1
+            fi
+          fi
