@@ -1,0 +1,31 @@
+name: Task / Feature
+description: Bounded task contract for human or AI execution
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Context
+      description: What needs to change and why. Link relevant files, ADRs, or prior issues.
+      placeholder: Briefly state the problem or goal.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope & Constraints
+      description: Exact boundaries and explicit non-goals (what NOT to touch).
+      placeholder: |-
+        - In scope:
+        - Out of scope / do not touch:
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Verifiable conditions or commands that define done.
+      placeholder: |-
+        - [ ] Behavior / output verified
+        - [ ] Tests and lint pass
+    validations:
+      required: true
