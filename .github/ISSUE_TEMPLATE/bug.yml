@@ -1,0 +1,29 @@
+name: Bug Report
+description: Reproducible defect with expected vs actual behavior
+body:
+  - type: textarea
+    id: repro
+    attributes:
+      label: Symptom & Reproduction
+      description: Exact command, input, or steps to reproduce.
+      placeholder: |-
+        1. Run ...
+        2. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs Actual
+      placeholder: |-
+        - Expected:
+        - Actual:
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Environment / Evidence
+      description: OS, version, error output, or logs (redact any secrets).
+    validations:
+      required: false
