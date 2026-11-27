@@ -16,3 +16,7 @@ Default Issue and Pull Request templates inherited by repositories without local
 - `.github/ISSUE_TEMPLATE/bug.yml` — concise bug report (repro, expected vs actual, evidence).
 - `.github/ISSUE_TEMPLATE/config.yml` — keeps blank issues enabled.
 - `.github/PULL_REQUEST_TEMPLATE.md` — evidence-first PR summary (`Summary`, `Verification`, `Risks / Follow-ups`, `Closes #`).
+
+## Code Review Legend
+
+[docs/code-review-legend.md](docs/code-review-legend.md) explains the priorities (`P1`–`P3`), emoji, verdicts and footer fields used in my PR reviews.
