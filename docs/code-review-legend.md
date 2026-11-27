@@ -40,16 +40,20 @@ I approve once a change clearly improves the code, even if it isn't perfect, fol
 
 ## Review footer
 
-Each review ends with a line like this:
+Each review ends with two lines like these:
 
 ```text
-Legend · Depth: light (docs-only change) · Lenses: single pass · Reviewer: claude-opus-5-5 · Commit: f6dca50 · Checks: source reads, CI status
+Findings: 0 P1 · 2 P2 · 5 P3 (P1 blocks merge · P2 should fix · P3 optional) · Legend
+Depth: light (docs-only change) · Lenses: single pass · Reviewer: claude-opus-5-5 · Commit: f6dca50 · Checks: source reads, CI status · Not checked: tests
 ```
 
 | Field | Meaning |
 | --- | --- |
+| Findings | How many comments of each priority the review holds, so you can see its weight at a glance. |
 | Depth | Light covers the full diff and the code around it, for small or low-risk changes. Heavy also checks each claim against the source, finds the real cause of any failing CI job and verifies every commented line before posting. Heavy is for security, auth, data, API, deployment, concurrency or broad changes. |
 | Lenses | The specialist reviewers that read the diff, such as `ce-security-sentinel`, `ce-performance-oracle` or `ce-architecture-strategist` from the [Compound Engineering plugin](https://github.com/EveryInc/compound-engineering-plugin). Single pass means one reviewer covered everything. |
 | Reviewer | The AI model that drafted the review. I check the findings and publish them myself. |
 | Commit | The commit I reviewed. Anything pushed after it hasn't been reviewed. |
-| Checks | What was actually run or read: tests, linters, CI status or source reads. Anything not listed wasn't checked. |
+| Checks | What was actually run or read: tests, linters, CI status or source reads. |
+| Not checked | Checks that would matter for this change but weren't done. Shown only when there are some. |
+| Cross-model | Shown only when a model from a different family, such as GPT or Gemini, also checked the findings. Agreement between two models of the same family doesn't count. |
