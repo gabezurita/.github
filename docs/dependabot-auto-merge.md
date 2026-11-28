@@ -1,28 +1,16 @@
 # Dependabot Auto-Merge Workflow
 
-## Summary
+The workflow approves eligible Dependabot PRs when approval is enabled and asks GitHub to merge them when the calling repository’s requirements pass.
 
-Use `gabezurita/.github/.github/workflows/dependabot-auto-merge.yml@main` to auto-merge minor and patch Dependabot PRs without checking out untrusted PR code in a privileged workflow. Pair it with a `pull_request` CI workflow, a `main` ruleset requiring that CI check, a `weekly` `dependabot.yml` schedule, and repository-level Dependabot alerts and security updates.
+## How the merge decision works
 
-## Security architecture
+1. The caller tests PR code on `pull_request` with read access. A separate `pull_request_target` job has merge permissions and reads Dependabot metadata without checking out the PR.
+2. Only `version-update:semver-patch` and `version-update:semver-minor` qualify. For any other value, including missing metadata, the workflow records the skip in the run summary and leaves the PR open for review.
+3. GitHub enforces the target branch’s required checks and reviews. The workflow requests auto-merge. If that request fails, it tries a direct merge only when GitHub reports `CLEAN` or `HAS_HOOKS`. Configure required checks before enabling the caller, and ensure the merge actor is subject to the rules.
 
-GitHub Actions splits CI verification from merge privileges across two triggers:
+## Update schedule
 
-1. **Test on `pull_request` (unprivileged):** Each repository's CI workflow (`ci.yml` or equivalent) checks out the PR merge commit with `contents: read` and no write or deployment secrets exposed to package install scripts.
-2. **Merge on `pull_request_target` (no checkout):** The caller delegates to `dependabot-auto-merge.yml` without running `actions/checkout`, preventing PR-controlled lockfiles or install scripts from executing with `pull-requests: write` or `contents: write`.
-3. **Semver gating:** `dependabot/fetch-metadata@v3` inspects the PR before any merge action. Updates with an empty `update-type` or `version-update:semver-major` exit cleanly and remain open for human review.
-4. **Ruleset enforcement:** The workflow calls `gh pr merge --auto` (falling back to an immediate `gh pr merge` only when `mergeStateStatus` is `CLEAN` or `HAS_HOOKS`). A `main` ruleset requiring the `pull_request` CI check guarantees GitHub blocks merging until tests pass.
-
-## Weekly version updates vs. event-driven security updates
-
-| Mechanism | Trigger | Scope | Controlled by |
-| --- | --- | --- | --- |
-| Dependabot version updates | Scheduled (`weekly`) | All new package versions | `.github/dependabot.yml` (`schedule.interval`) |
-| Dependabot security updates | Event-driven (immediate on advisory) | Known vulnerable dependencies only | Repo settings (`vulnerability-alerts` and `automated-security-fixes`) |
-
-- `schedule.interval` in `.github/dependabot.yml` controls routine version bumps only; switching from `daily` to `weekly` does not delay CVE fixes.
-- Security updates open immediately when a GitHub Advisory is published and still flow through the auto-merge workflow (`!= version-update:semver-major`).
-- Running routine auto-merged bumps `daily` pulls newly published npm and PyPI releases within hours, before registries or maintainers yank compromised versions. A `weekly` schedule narrows that supply-chain window and cuts CI and notification volume roughly sevenfold.
+Set routine version updates to weekly in `.github/dependabot.yml`. Dependabot security updates are triggered separately by eligible alerts when security updates are enabled. Both kinds of PR use the same merge policy.
 
 ## Repository onboarding
 
@@ -76,6 +64,20 @@ jobs:
 Enable these repository settings before relying on auto-merge:
 
 1. **Auto-merge enabled:** `allow_auto_merge: true` (`gh api -X PATCH repos/{owner}/{repo} -F allow_auto_merge=true`).
-2. **Required CI status check on `main`:** Active branch ruleset requiring the exact `pull_request` job name(s) from GitHub Actions (`integration_id: 15368`). Without a required status check, `gh pr merge --auto` or a clean fallback can merge before CI completes.
+2. **Required CI status check on `main`:** Active branch ruleset requiring the exact `pull_request` job name(s) from GitHub Actions (`integration_id: 15368`). Verify on an ordinary PR that the merge box shows the required job and blocks merging while it is pending.
 3. **Dependabot alerts and security updates:** Enable `PUT /repos/{owner}/{repo}/vulnerability-alerts` and `PUT /repos/{owner}/{repo}/automated-security-fixes`.
 4. **Weekly version schedule:** Set `schedule.interval: weekly` in `.github/dependabot.yml`.
+
+## Troubleshooting
+
+- **A run succeeded and the PR is still open.** Check the run summary for the update type and dependency names. A skipped update needs manual review. For an eligible update, check the PR’s merge box for outstanding requirements.
+- **Approval failed.** Open the “Approve and enable auto-merge” step log. Approval is best effort, so the workflow still requests auto-merge. If the branch requires a review, check the merge box and obtain an eligible review. If using the default token, check the caller’s Actions setting for permission to approve pull requests.
+- **A required check stays pending.** Compare the exact job name and source app in the target branch’s active ruleset with the checks on the PR’s latest commit. Confirm that CI runs on `pull_request` for that branch and that path filters allow it to start.
+
+### Pause or resume auto-merge
+
+Run these commands from the calling repository, using its caller workflow filename:
+
+1. Disable new runs with `gh workflow disable dependabot-auto-merge.yml`. Inspect the workflow’s Actions page and cancel queued or running jobs that could still request a merge.
+2. Find open PRs with auto-merge enabled using `gh pr list --state open --limit 1000 --json number,autoMergeRequest --jq '.[] | select(.autoMergeRequest != null) | .number'`. Inspect the PRs you intend to stop and run `gh pr merge <number> --disable-auto` for each. Confirm in the merge box that auto-merge is off. If the repository uses a merge queue, also check the queue and remove the PR if it has already entered.
+3. Before resuming, verify that CI reports the required job on a recent PR and that the active branch rule requires it. Run `gh workflow enable dependabot-auto-merge.yml` and check the next eligible PR’s run summary and merge box.

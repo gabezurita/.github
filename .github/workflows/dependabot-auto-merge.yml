@@ -48,17 +48,10 @@ jobs:
         with:
           github-token: ${{ steps.app-token.outputs.token || github.token }}
 
-      - name: Skip major or unknown updates
-        if: ${{ steps.metadata.outputs.update-type == '' || steps.metadata.outputs.update-type == 'version-update:semver-major' }}
+      - name: Approve and enable auto-merge
         env:
           UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
           DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
-        run: |
-          echo "Skipping auto-merge (update-type='$UPDATE_TYPE', dependencies='$DEPENDENCY_NAMES')." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Approve and enable auto-merge
-        if: ${{ steps.metadata.outputs.update-type != '' && steps.metadata.outputs.update-type != 'version-update:semver-major' }}
-        env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
           APPROVE: ${{ inputs.approve }}
@@ -66,13 +59,21 @@ jobs:
         run: |
           set -euo pipefail
 
+          case "$UPDATE_TYPE" in
+            version-update:semver-patch|version-update:semver-minor) ;;
+            *)
+              echo "Skipping auto-merge (update-type='$UPDATE_TYPE', dependencies='$DEPENDENCY_NAMES')." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+              ;;
+          esac
+
           case "$MERGE_METHOD" in
             squash|merge|rebase) MERGE_FLAG="--$MERGE_METHOD" ;;
             *) echo "Unsupported merge-method: $MERGE_METHOD" >&2; exit 1 ;;
           esac
 
           if [[ "$APPROVE" == "true" ]]; then
-            gh pr review --approve --body "Auto-approved: Dependabot non-major update gated by required status checks." "$PR_URL" || true
+            gh pr review --approve --body "Auto-approved: Dependabot patch or minor update gated by required status checks." "$PR_URL" || true
           fi
 
           if ! gh pr merge --auto "$MERGE_FLAG" "$PR_URL"; then
