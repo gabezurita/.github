@@ -1,6 +1,10 @@
 # Shared GitHub workflows and templates
 
-The Dependabot workflow requests auto-merge for patch and minor updates. The calling repository runs its own CI on `pull_request` and enforces required checks through its branch rules. A separate `pull_request_target` workflow reads Dependabot metadata and requests the merge without checking out PR code.
+This is where I keep the tools and conventions I use to maintain my projects on GitHub. You’ll find issue forms, a pull request template, a guide to my review comments, and a reusable workflow for dependency updates.
+
+## Dependency updates
+
+The [Dependabot auto-merge workflow](.github/workflows/dependabot-auto-merge.yml) asks GitHub to merge patch and minor updates once the calling repository’s required checks pass. The caller tests PR code on `pull_request`. A separate `pull_request_target` job reads Dependabot metadata and requests the merge without checking out PR code.
 
 The [workflow guide](docs/dependabot-auto-merge.md) covers setup, required checks, and how to stop a pending merge.
 
