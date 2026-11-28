@@ -25,6 +25,9 @@ jobs:
         run: |
           python -c "import yaml, glob; [yaml.safe_load(open(f)) for f in glob.glob('.github/**/*.yml', recursive=True)]"
 
+      - name: Check Dependabot update eligibility
+        run: python tests/test_auto_merge.py
+
       - name: Run actionlint
         run: |
           curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash | bash -s 1.7.12
